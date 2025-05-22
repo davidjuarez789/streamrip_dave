@@ -147,6 +147,26 @@ For more in-depth information about `streamrip`, see the help pages and the [wik
 All contributions are appreciated! You can help out the project by opening an issue
 or by submitting code.
 
+### Setting up a Development Environment
+
+This project uses Poetry for dependency management. Install Poetry by following the instructions on [their official website](https://python-poetry.org/docs/#installation).
+
+Once Poetry is installed, navigate to the project's root directory and run the following command to install project dependencies, including development dependencies like Pytest:
+
+```bash
+poetry install
+```
+
+### Running Tests
+
+This project uses Pytest for testing. To run the test suite, execute the following command in the project's root directory:
+
+```bash
+poetry run pytest
+```
+
+You can find examples of basic tests in `tests/test_versions.py`, such as `test_streamrip_versions_match`.
+
 ### Issues
 
 If you're opening an issue **use the Feature Request or Bug Report templates properly**. This ensures
