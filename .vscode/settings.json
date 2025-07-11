@@ -1,7 +1,6 @@
 {
-    "python.testing.pytestArgs": [
-        "streamrip"
-    ],
-    "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+	"python.testing.pytestArgs": ["streamrip"],
+	"python.testing.unittestEnabled": false,
+	"python.testing.pytestEnabled": true,
+	"diffEditor.codeLens": true
 }
