@@ -2,5 +2,19 @@
 	"python.testing.pytestArgs": ["streamrip"],
 	"python.testing.unittestEnabled": false,
 	"python.testing.pytestEnabled": true,
-	"diffEditor.codeLens": true
+    "diffEditor.codeLens": true,
+    "github.copilot.enable": {
+        "plaintext": true,
+        "markdown": true
+    },
+    "cSpell.words": [
+        "asyncio",
+        "Cryptodome",
+        "Deezer",
+        "FLAC",
+        "pytest",
+        "Qobuz",
+        "Streamable",
+        "Streamrip"
+    ]
 }
