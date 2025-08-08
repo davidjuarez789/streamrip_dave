@@ -9,12 +9,14 @@ Streamrip is a Python CLI application for downloading music from Qobuz, Deezer, 
 ## Development Commands
 
 ### Setup
+
 ```bash
 poetry install              # Install dependencies
 poetry install --all-extras # Install with optional SSL support
 ```
 
 ### Testing
+
 ```bash
 pytest                     # Run all tests
 poetry run pytest         # Run tests through Poetry
@@ -23,6 +25,7 @@ pytest tests/test_specific.py::TestClass::test_method  # Run single test
 ```
 
 ### Linting and Formatting
+
 ```bash
 # Linting (use Ruff as primary linter)
 ruff check .              # Check for linting issues
@@ -35,6 +38,7 @@ poetry run black .        # Format through Poetry
 ```
 
 ### Building and Running
+
 ```bash
 poetry build              # Build distribution packages
 poetry run rip            # Run the CLI
