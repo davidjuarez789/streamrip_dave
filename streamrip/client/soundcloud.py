@@ -80,25 +80,22 @@ class SoundcloudClient(Client):
         self,
         media_type: str,
         query: str,
-        limit: int = 50,
-        offset: int = 0,
+        limit: int = 200,
     ) -> list[dict]:
-        # TODO: implement pagination
         assert media_type in ("track", "playlist"), f"Cannot search for {media_type}"
         params = {
             "q": query,
             "facet": "genre",
             "user_id": USER_ID,
-            "limit": limit,
-            "offset": offset,
-            "linked_partitioning": "1",
         }
-        resp, status = await self._api_request(f"search/{media_type}s", params=params)
-        assert status == 200
+        epoint = f"search/{media_type}s"
+        pages = await self._paginate(epoint, params, limit=limit)
+
         if media_type == "track":
-            for item in resp["collection"]:
-                item["id"] = self._get_custom_id(item)
-        return [resp]
+            for page in pages:
+                for item in page["collection"]:
+                    item["id"] = self._get_custom_id(item)
+        return pages
 
     async def get_downloadable(self, item_info: str, _) -> SoundcloudDownloadable:
         # We have `get_metadata` overwrite the "id" field so that it contains
@@ -223,6 +220,30 @@ class SoundcloudClient(Client):
 
         assert url is not None
         return f"{item_id}|{url}"
+
+    async def _paginate(self, epoint: str, params: dict, limit: int = 200) -> list[dict]:
+        pages = []
+
+        params["limit"] = 50
+        params["linked_partitioning"] = "1"
+
+        current_url = f"{BASE}/{epoint}"
+        current_params = params
+
+        total_fetched = 0
+
+        while current_url and total_fetched < limit:
+            resp, status = await self._request(current_url, params=current_params)
+            assert status == 200
+            pages.append(resp)
+
+            collection = resp.get("collection", [])
+            total_fetched += len(collection)
+
+            current_url = resp.get("next_href")
+            current_params = None  # params are in next_href
+
+        return pages
 
     async def _api_request(self, path, params=None, headers=None):
         url = f"{BASE}/{path}"

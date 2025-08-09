@@ -87,20 +87,16 @@ class TidalClient(Client):
         url = f"{media_type}s/{item_id}"
         item = await self._api_request(url)
         if media_type in ("playlist", "album"):
-            # TODO: move into new method and make concurrent
-            resp = await self._api_request(f"{url}/items")
-            tracks_left = item["numberOfTracks"]
-            if tracks_left > 100:
-                offset = 0
-                while tracks_left > 0:
-                    offset += 100
-                    tracks_left -= 100
-                    items_resp = await self._api_request(
-                        f"{url}/items", {"offset": offset}
-                    )
-                    resp["items"].extend(items_resp["items"])
+            url_items = f"{url}/items"
+            resp = await self._api_request(url_items)
 
-            item["tracks"] = [item["item"] for item in resp["items"]]
+            all_items = resp["items"]
+            tracks_total = item["numberOfTracks"]
+            if tracks_total > len(all_items):
+                remaining_items = await self._paginate(url_items, tracks_total)
+                all_items.extend(remaining_items)
+
+            item["tracks"] = [item["item"] for item in all_items]
         elif media_type == "artist":
             logger.debug("filtering eps")
             album_resp, ep_resp = await asyncio.gather(
@@ -209,6 +205,17 @@ class TidalClient(Client):
         *_, last_match = STREAM_URL_REGEX.finditer(available_urls.text)
 
         return last_match.group(1)
+
+    async def _paginate(self, url: str, total: int) -> list[dict]:
+        """Paginates through a list of items from the Tidal API."""
+        limit = 100
+        requests = [
+            self._api_request(url, {"offset": offset})
+            for offset in range(limit, total, limit)
+        ]
+
+        results = await asyncio.gather(*requests)
+        return [item for resp in results for item in resp["items"]]
 
     # ---------- Login Utilities ---------------
 
