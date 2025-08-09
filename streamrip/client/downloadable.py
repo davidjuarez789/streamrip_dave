@@ -22,7 +22,12 @@ from Cryptodome.Cipher import AES, Blowfish
 from Cryptodome.Util import Counter
 
 from .. import converter
-from ..exceptions import NonStreamableError
+from ..exceptions import (
+    ConversionError,
+    InvalidFileTypeError,
+    MissingDependencyError,
+    NonStreamableError,
+)
 
 logger = logging.getLogger("streamrip")
 
@@ -47,8 +52,8 @@ async def fast_async_download(path, url, headers, callback):
     chunk_size: int = 2**17  # 131 KB
     counter = 0
     yield_every = 8  # 1 MB
-    with open(path, "wb") as file:  # noqa: ASYNC101
-        with requests.get(  # noqa: ASYNC100
+    with open(path, "wb") as file:  # noqa: ASYNC230
+        with requests.get(  # noqa: ASYNC210
             url,
             headers=headers,
             allow_redirects=True,
@@ -316,7 +321,7 @@ class SoundcloudDownloadable(Downloadable):
         elif self.file_type == "original":
             self.extension = "flac"
         else:
-            raise Exception(f"Invalid file type: {self.file_type}")
+            raise InvalidFileTypeError(f"Invalid file type: {self.file_type}")
         self.url = info["url"]
 
     async def _download(self, path, callback):
@@ -378,7 +383,7 @@ async def concat_audio_files(paths: list[str], out: str, ext: str, max_files_ope
     Recurses log_{max_file_open}(len(paths)) times.
     """
     if shutil.which("ffmpeg") is None:
-        raise Exception("FFmpeg must be installed.")
+        raise MissingDependencyError("FFmpeg must be installed.")
 
     # Base case
     if len(paths) == 1:
@@ -426,7 +431,7 @@ async def concat_audio_files(paths: list[str], out: str, ext: str, max_files_ope
     await asyncio.gather(*[p.communicate() for p in processes])
     for proc in processes:
         if proc.returncode != 0:
-            raise Exception(
+            raise ConversionError(
                 f"FFMPEG returned with status code {proc.returncode} error: {proc.stderr} output: {proc.stdout}",
             )
 

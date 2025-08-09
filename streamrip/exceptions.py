@@ -68,3 +68,35 @@ class NonStreamableError(Exception):
 
 class ConversionError(Exception):
     """ConversionError."""
+
+
+class InvalidMediaTypeError(Exception):
+    """InvalidMediaTypeError."""
+
+
+class InvalidSourceError(Exception):
+    """InvalidSourceError."""
+
+
+class URLParsingError(Exception):
+    """URLParsingError."""
+
+
+class APIError(Exception):
+    """APIError."""
+
+
+class ParsingError(Exception):
+    """ParsingError."""
+
+
+class MissingDependencyError(Exception):
+    """MissingDependencyError."""
+
+
+class InvalidFileTypeError(Exception):
+    """InvalidFileTypeError."""
+
+
+class TaggerError(Exception):
+    """TaggerError."""

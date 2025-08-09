@@ -251,7 +251,7 @@ async def test_qobuz_spoofer_initialization(mock_client_session):
 @pytest.mark.asyncio
 async def test_lastfm_playlist_session_creation(mock_client_session):
     """Test that PendingLastfmPlaylist creates a ClientSession."""
-    from streamrip.media.playlist import PendingLastfmPlaylist
+    from streamrip.media import PendingLastfmPlaylist
 
     # Mock objects needed for playlist
     mock_client = MagicMock()

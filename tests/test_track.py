@@ -7,7 +7,7 @@ from util import arun
 import streamrip.db as db
 from streamrip.client.downloadable import Downloadable
 from streamrip.client.qobuz import QobuzClient
-from streamrip.media.track import PendingSingle, Track
+from streamrip.media import PendingSingle, Track
 
 
 @pytest.mark.skipif(

@@ -2,14 +2,10 @@ import asyncio
 import logging
 from dataclasses import dataclass
 
-from streamrip.exceptions import NonStreamableError
-
 from ..client import Client
 from ..config import Config
-from ..db import Database
-from ..metadata import LabelMetadata
-from .album import PendingAlbum
-from .media import Media, Pending
+from .media import Media
+from .pending.album import PendingAlbum
 
 logger = logging.getLogger("streamrip")
 
@@ -53,28 +49,3 @@ class Label(Media):
         total = len(iterable)
         for ndx in range(0, total, n):
             yield iterable[ndx : min(ndx + n, total)]
-
-
-@dataclass(slots=True)
-class PendingLabel(Pending):
-    id: str
-    client: Client
-    config: Config
-    db: Database
-
-    async def resolve(self) -> Label | None:
-        try:
-            resp = await self.client.get_metadata(self.id, "label")
-        except NonStreamableError as e:
-            logger.error(f"Error resolving Label: {e}")
-            return None
-        try:
-            meta = LabelMetadata.from_resp(resp, self.client.source)
-        except Exception as e:
-            logger.error(f"Error resolving Label: {e}")
-            return None
-        albums = [
-            PendingAlbum(album_id, self.client, self.config, self.db)
-            for album_id in meta.album_ids()
-        ]
-        return Label(meta.name, albums, self.client, self.config)

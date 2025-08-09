@@ -4,6 +4,8 @@ import textwrap
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+from ..exceptions import InvalidMediaTypeError
+
 
 class Summary(ABC):
     id: str
@@ -244,7 +246,7 @@ class SearchResults:
         elif media_type == "playlist":
             summary_type = PlaylistSummary
         else:
-            raise Exception(f"invalid media type {media_type}")
+            raise InvalidMediaTypeError(f"invalid media type {media_type}")
 
         results = []
         for page in pages:

@@ -28,7 +28,7 @@ def global_download_semaphore(c: DownloadsConfig) -> asyncio.Semaphore | nullcon
         return _unlimited
 
     if max_connections <= 0:
-        raise Exception(f"{max_connections = } too small")
+        raise ValueError(f"{max_connections = } too small")
 
     if _global_semaphore is None:
         _global_semaphore = (max_connections, asyncio.Semaphore(max_connections))

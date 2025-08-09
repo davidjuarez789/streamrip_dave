@@ -6,11 +6,9 @@ from dataclasses import dataclass
 from ..client import Client
 from ..config import Config, QobuzDiscographyFilterConfig
 from ..console import console
-from ..db import Database
-from ..exceptions import NonStreamableError
-from ..metadata import ArtistMetadata
-from .album import Album, PendingAlbum
-from .media import Media, Pending
+from .album import Album
+from .media import Media
+from .pending.album import PendingAlbum
 
 logger = logging.getLogger("streamrip")
 
@@ -175,34 +173,3 @@ class Artist(Media):
         total = len(iterable)
         for ndx in range(0, total, n):
             yield iterable[ndx : min(ndx + n, total)]
-
-
-@dataclass(slots=True)
-class PendingArtist(Pending):
-    id: str
-    client: Client
-    config: Config
-    db: Database
-
-    async def resolve(self) -> Artist | None:
-        try:
-            resp = await self.client.get_metadata(self.id, "artist")
-        except NonStreamableError as e:
-            logger.error(
-                f"Artist {self.id} not available to stream on {self.client.source} ({e})",
-            )
-            return None
-
-        try:
-            meta = ArtistMetadata.from_resp(resp, self.client.source)
-        except Exception as e:
-            logger.error(
-                f"Error building artist metadata: {e}",
-            )
-            return None
-
-        albums = [
-            PendingAlbum(album_id, self.client, self.config, self.db)
-            for album_id in meta.album_ids()
-        ]
-        return Artist(meta.name, albums, self.client, self.config)

@@ -12,6 +12,8 @@ import click
 from tomlkit.api import dumps, parse
 from tomlkit.toml_document import TOMLDocument
 
+from .exceptions import InvalidSourceError
+
 logger = logging.getLogger("streamrip")
 
 APP_DIR = click.get_app_dir("streamrip")
@@ -349,7 +351,7 @@ class ConfigData:
         }
         res = d.get(source)
         if res is None:
-            raise Exception(f"Invalid source {source}")
+            raise InvalidSourceError(f"Invalid source {source}")
         return res
 
 

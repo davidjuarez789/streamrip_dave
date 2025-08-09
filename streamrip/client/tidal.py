@@ -9,7 +9,12 @@ from json import JSONDecodeError
 import aiohttp
 
 from ..config import Config
-from ..exceptions import NonStreamableError
+from ..exceptions import (
+    APIError,
+    AuthenticationError,
+    MissingCredentialsError,
+    NonStreamableError,
+)
 from .client import Client
 from .downloadable import TidalDownloadable
 
@@ -55,7 +60,7 @@ class TidalClient(Client):
         )
         c = self.config
         if not c.access_token:
-            raise Exception("Access token not found in config.")
+            raise MissingCredentialsError("Access token not found in config.")
 
         self.token_expiry = float(c.token_expiry)
         self.refresh_token = c.refresh_token
@@ -164,7 +169,7 @@ class TidalClient(Client):
         try:
             manifest = json.loads(base64.b64decode(resp["manifest"]).decode("utf-8"))
         except KeyError:
-            raise Exception(resp["userMessage"])
+            raise APIError(resp["userMessage"])
         except JSONDecodeError:
             logger.warning(
                 f"Failed to get manifest for {track_id}. Retrying with lower quality."
@@ -228,10 +233,10 @@ class TidalClient(Client):
             resp = await _resp.json()
 
         if resp.get("status", 200) != 200:
-            raise Exception(f"Login failed {resp}")
+            raise AuthenticationError(f"Login failed {resp}")
 
         if str(resp.get("userId")) != str(user_id):
-            raise Exception(f"User id mismatch {resp['userId']} v {user_id}")
+            raise AuthenticationError(f"User id mismatch {resp['userId']} v {user_id}")
 
         c = self.config
         c.user_id = resp["userId"]
@@ -247,7 +252,7 @@ class TidalClient(Client):
         resp = await self._api_post(f"{AUTH_URL}/device_authorization", data)
 
         if resp.get("status", 200) != 200:
-            raise Exception(f"Device authorization failed {resp}")
+            raise AuthenticationError(f"Device authorization failed {resp}")
 
         device_code = resp["deviceCode"]
         return f"https://{device_code}"
@@ -300,7 +305,7 @@ class TidalClient(Client):
         resp = await self._api_post(f"{AUTH_URL}/token", data, AUTH)
 
         if resp.get("status", 200) != 200:
-            raise Exception("Refresh failed")
+            raise AuthenticationError("Refresh failed")
 
         c = self.config
         c.access_token = resp["access_token"]
@@ -319,7 +324,7 @@ class TidalClient(Client):
         resp = await self._api_post(f"{AUTH_URL}/device_authorization", data)
 
         if resp.get("status", 200) != 200:
-            raise Exception(f"Device authorization failed {resp}")
+            raise AuthenticationError(f"Device authorization failed {resp}")
 
         return resp["deviceCode"], resp["verificationUriComplete"]
 

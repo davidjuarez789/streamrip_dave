@@ -4,6 +4,7 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
+from ..exceptions import InvalidSourceError
 from .album import AlbumMetadata
 from .util import safe_get, typed
 
@@ -225,7 +226,7 @@ class TrackMetadata:
             return cls.from_soundcloud(album, resp)
         if source == "deezer":
             return cls.from_deezer(album, resp)
-        raise Exception
+        raise InvalidSourceError(f"Invalid source: {source}")
 
     def format_track_path(self, format_string: str) -> str:
         # Available keys: "tracknumber", "artist", "albumartist", "composer", "title",

@@ -8,7 +8,9 @@ from Cryptodome.Cipher import AES
 
 from ..config import Config
 from ..exceptions import (
+    APIError,
     AuthenticationError,
+    InvalidMediaTypeError,
     MissingCredentialsError,
     NonStreamableError,
 )
@@ -64,7 +66,9 @@ class DeezerClient(Client):
         elif media_type == "artist":
             return await self.get_artist(item_id)
         else:
-            raise Exception(f"Media type {media_type} not available on deezer")
+            raise InvalidMediaTypeError(
+                f"Media type {media_type} not available on deezer"
+            )
 
     async def get_track(self, item_id: str) -> dict:
         try:
@@ -123,12 +127,12 @@ class DeezerClient(Client):
                 else:
                     search_function = self.client.api.get_editorial_releases
             except AttributeError:
-                raise Exception(f'Invalid editorical selection "{query}"')
+                raise APIError(f'Invalid editorical selection "{query}"')
         else:
             try:
                 search_function = getattr(self.client.api, f"search_{media_type}")
             except AttributeError:
-                raise Exception(f"Invalid media type {media_type}")
+                raise InvalidMediaTypeError(f"Invalid media type {media_type}")
 
         response = search_function(query, limit=limit)  # type: ignore
         if response["total"] > 0:

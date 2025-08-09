@@ -5,6 +5,7 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
+from ..exceptions import InvalidSourceError
 from ..filepath_utils import clean_filename, clean_filepath
 from .covers import Covers
 from .util import get_quality_id, safe_get, typed
@@ -505,7 +506,7 @@ class AlbumMetadata:
             if "tracks" not in resp["album"]:
                 return cls.from_incomplete_deezer_track_resp(resp)
             return cls.from_deezer(resp["album"])
-        raise Exception("Invalid source")
+        raise InvalidSourceError("Invalid source")
 
     @classmethod
     def from_album_resp(cls, resp: dict, source: str) -> AlbumMetadata | None:
@@ -517,4 +518,4 @@ class AlbumMetadata:
             return cls.from_soundcloud(resp)
         if source == "deezer":
             return cls.from_deezer(resp)
-        raise Exception("Invalid source")
+        raise InvalidSourceError("Invalid source")

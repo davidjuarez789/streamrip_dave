@@ -1,29 +1,24 @@
 import asyncio
-import json
 import logging
 import platform
-
-import aiofiles
 
 from .. import db
 from ..client import Client, DeezerClient, QobuzClient, SoundcloudClient, TidalClient
 from ..config import Config
 from ..console import console
+from ..exceptions import InvalidSourceError, URLParsingError
 from ..media import (
     Media,
     Pending,
-    PendingAlbum,
-    PendingArtist,
-    PendingLabel,
-    PendingLastfmPlaylist,
-    PendingPlaylist,
-    PendingSingle,
     remove_artwork_tempdirs,
 )
-from ..metadata import SearchResults
+from ..media.factory import create_pending_item
+from ..media.pending.playlist import PendingLastfmPlaylist
 from ..progress import clear_progress
+from .downloader import Downloader
 from .parse_url import parse_url
 from .prompter import get_prompter
+from .search import Searcher
 
 logger = logging.getLogger("streamrip")
 
@@ -69,6 +64,8 @@ class Main:
             failed_downloads_db = db.Dummy()
 
         self.database = db.Database(downloads_db, failed_downloads_db)
+        self.searcher = Searcher(self)
+        self.downloader = Downloader(self)
 
     async def add(self, url: str):
         """Add url as a pending item.
@@ -77,7 +74,7 @@ class Main:
         """
         parsed = parse_url(url)
         if parsed is None:
-            raise Exception(f"Unable to parse url {url}")
+            raise URLParsingError(f"Unable to parse url {url}")
 
         client = await self.get_logged_in_client(parsed.source)
         self.pending.append(
@@ -96,20 +93,13 @@ class Main:
             self._add_by_id_client(clients[source], media_type, id)
 
     def _add_by_id_client(self, client: Client, media_type: str, id: str):
-        if media_type == "track":
-            item = PendingSingle(id, client, self.config, self.database)
-        elif media_type == "album":
-            item = PendingAlbum(id, client, self.config, self.database)
-        elif media_type == "playlist":
-            item = PendingPlaylist(id, client, self.config, self.database)
-        elif media_type == "label":
-            item = PendingLabel(id, client, self.config, self.database)
-        elif media_type == "artist":
-            item = PendingArtist(id, client, self.config, self.database)
-        else:
-            raise Exception(media_type)
-
-        self.pending.append(item)
+        try:
+            item = create_pending_item(
+                media_type, id, client, self.config, self.database
+            )
+            self.pending.append(item)
+        except ValueError as e:
+            raise Exception(e) from e
 
     async def add_all(self, urls: list[str]):
         """Add multiple urls concurrently as pending items."""
@@ -135,7 +125,7 @@ class Main:
         """Return a functioning client instance for `source`."""
         client = self.clients.get(source)
         if client is None:
-            raise Exception(
+            raise InvalidSourceError(
                 f"No client named {source} available. Only have {self.clients.keys()}",
             )
         if not client.logged_in:
@@ -162,110 +152,6 @@ class Main:
 
         self.media.extend(new_media)
         self.pending.clear()
-
-    async def rip(self):
-        """Download all resolved items."""
-        results = await asyncio.gather(
-            *[item.rip() for item in self.media], return_exceptions=True
-        )
-
-        failed_items = 0
-        for result in results:
-            if isinstance(result, Exception):
-                logger.error(f"Error processing media item: {result}")
-                failed_items += 1
-
-        if failed_items > 0:
-            total_items = len(self.media)
-            logger.info(
-                f"Download completed with {failed_items} failed items out of {total_items} total items."
-            )
-
-    async def search_interactive(self, source: str, media_type: str, query: str):
-        client = await self.get_logged_in_client(source)
-
-        with console.status(f"[bold]Searching {source}", spinner="dots"):
-            pages = await client.search(media_type, query, limit=100)
-            if len(pages) == 0:
-                console.print(f"[red]No search results found for query {query}")
-                return
-            search_results = SearchResults.from_pages(source, media_type, pages)
-
-        if platform.system() == "Windows":  # simple term menu not supported for windows
-            from pick import pick
-
-            choices = pick(
-                search_results.results,
-                title=(
-                    f"{source.capitalize()} {media_type} search.\n"
-                    "Press SPACE to select, RETURN to download, CTRL-C to exit."
-                ),
-                multiselect=True,
-                min_selection_count=1,
-            )
-            assert isinstance(choices, list)
-
-            await self.add_all_by_id(
-                [(source, media_type, item.id) for item, _ in choices],
-            )
-
-        else:
-            from simple_term_menu import TerminalMenu
-
-            menu = TerminalMenu(
-                search_results.summaries(),
-                preview_command=search_results.preview,
-                preview_size=0.5,
-                title=(
-                    f"Results for {media_type} '{query}' from {source.capitalize()}\n"
-                    "SPACE - select, ENTER - download, ESC - exit"
-                ),
-                cycle_cursor=True,
-                clear_screen=True,
-                multi_select=True,
-            )
-            chosen_ind = menu.show()
-            if chosen_ind is None:
-                console.print("[yellow]No items chosen. Exiting.")
-            else:
-                choices = search_results.get_choices(chosen_ind)
-                await self.add_all_by_id(
-                    [(source, item.media_type(), item.id) for item in choices],
-                )
-
-    async def search_take_first(self, source: str, media_type: str, query: str):
-        client = await self.get_logged_in_client(source)
-        with console.status(f"[bold]Searching {source}", spinner="dots"):
-            pages = await client.search(media_type, query, limit=1)
-
-        if len(pages) == 0:
-            console.print(f"[red]No search results found for query {query}")
-            return
-
-        search_results = SearchResults.from_pages(source, media_type, pages)
-        assert len(search_results.results) > 0
-        first = search_results.results[0]
-        await self.add_by_id(source, first.media_type(), first.id)
-
-    async def search_output_file(
-        self, source: str, media_type: str, query: str, filepath: str, limit: int
-    ):
-        client = await self.get_logged_in_client(source)
-        with console.status(f"[bold]Searching {source}", spinner="dots"):
-            pages = await client.search(media_type, query, limit=limit)
-
-        if len(pages) == 0:
-            console.print(f"[red]No search results found for query {query}")
-            return
-
-        search_results = SearchResults.from_pages(source, media_type, pages)
-        file_contents = json.dumps(search_results.as_list(source), indent=4)
-        async with aiofiles.open(filepath, "w") as f:
-            await f.write(file_contents)
-
-        console.print(
-            f"Wrote [purple]{len(search_results.results)}[/purple] results to [cyan]{filepath} as JSON!"
-        )
 
     async def resolve_lastfm(self, playlist_url: str):
         """Resolve a last.fm playlist."""

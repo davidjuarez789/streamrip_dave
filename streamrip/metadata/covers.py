@@ -32,7 +32,7 @@ class Covers:
             return 2
         if size == "thumbnail":
             return 3
-        raise Exception(f"Invalid {size = }")
+        raise ValueError(f"Invalid {size = }")
 
     def empty(self) -> bool:
         return all(url is None for _, url, _ in self._covers)
@@ -42,7 +42,7 @@ class Covers:
             if url is not None:
                 self.set_cover(size, url, path)
                 return
-        raise Exception(f"No covers found in {self}")
+        raise ValueError(f"No covers found in {self}")
 
     def set_path(self, size: str, path: str):
         i = self._indexof(size)
@@ -54,7 +54,7 @@ class Covers:
             if u is not None:
                 return (s, u, p)
 
-        raise Exception(f"No covers found in {self}")
+        raise ValueError(f"No covers found in {self}")
 
     @classmethod
     def from_qobuz(cls, resp):
@@ -106,7 +106,7 @@ class Covers:
             for s, u, p in self._covers[i + 1 :]:
                 if u is not None:
                     return (s, u, p)
-        raise Exception(f"Cover not found for {size = }. Available: {self}")
+        raise ValueError(f"Cover not found for {size = }. Available: {self}")
 
     @staticmethod
     def _get_tidal_cover_url(uuid, size):

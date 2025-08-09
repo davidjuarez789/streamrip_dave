@@ -7,14 +7,9 @@ from abc import ABC, abstractmethod
 from ..client import Client, SoundcloudClient
 from ..config import Config
 from ..db import Database
-from ..media import (
-    Pending,
-    PendingAlbum,
-    PendingArtist,
-    PendingLabel,
-    PendingPlaylist,
-    PendingSingle,
-)
+from ..exceptions import ParsingError
+from ..media.factory import create_pending_item
+from ..media.media import Pending
 
 logger = logging.getLogger("streamrip")
 URL_REGEX = re.compile(
@@ -73,17 +68,7 @@ class GenericURL(URL):
         source, media_type, item_id = self.match.groups()
         assert client.source == source
 
-        if media_type == "track":
-            return PendingSingle(item_id, client, config, db)
-        elif media_type == "album":
-            return PendingAlbum(item_id, client, config, db)
-        elif media_type == "playlist":
-            return PendingPlaylist(item_id, client, config, db)
-        elif media_type == "artist":
-            return PendingArtist(item_id, client, config, db)
-        elif media_type == "label":
-            return PendingLabel(item_id, client, config, db)
-        raise NotImplementedError
+        return create_pending_item(media_type, item_id, client, config, db)
 
 
 class QobuzInterpreterURL(URL):
@@ -110,7 +95,7 @@ class QobuzInterpreterURL(URL):
             artist_id = possible_id
         else:
             artist_id = await self.extract_interpreter_url(url, client)
-        return PendingArtist(artist_id, client, config, db)
+        return create_pending_item("artist", artist_id, client, config, db)
 
     @staticmethod
     async def extract_interpreter_url(url: str, client: Client) -> str:
@@ -128,7 +113,7 @@ class QobuzInterpreterURL(URL):
         if match:
             return match.group(1)
 
-        raise Exception(
+        raise ParsingError(
             "Unable to extract artist id from interpreter url. Use a "
             "url that contains an artist id.",
         )
@@ -156,17 +141,7 @@ class DeezerDynamicURL(URL):
     ) -> Pending:
         url = self.match.group(0)  # entire dynamic link
         media_type, item_id = await self._extract_info_from_dynamic_link(url, client)
-        if media_type == "track":
-            return PendingSingle(item_id, client, config, db)
-        elif media_type == "album":
-            return PendingAlbum(item_id, client, config, db)
-        elif media_type == "playlist":
-            return PendingPlaylist(item_id, client, config, db)
-        elif media_type == "artist":
-            return PendingArtist(item_id, client, config, db)
-        elif media_type == "label":
-            return PendingLabel(item_id, client, config, db)
-        raise NotImplementedError
+        return create_pending_item(media_type, item_id, client, config, db)
 
     @classmethod
     async def _extract_info_from_dynamic_link(
@@ -184,7 +159,7 @@ class DeezerDynamicURL(URL):
         if match:
             return match.group(1), match.group(2)
 
-        raise Exception("Unable to extract Deezer dynamic link.")
+        raise ParsingError("Unable to extract Deezer dynamic link.")
 
 
 class SoundcloudURL(URL):
@@ -202,12 +177,7 @@ class SoundcloudURL(URL):
         resolved = await client.resolve_url(self.url)
         media_type = resolved["kind"]
         item_id = str(resolved["id"])
-        if media_type == "track":
-            return PendingSingle(item_id, client, config, db)
-        elif media_type == "playlist":
-            return PendingPlaylist(item_id, client, config, db)
-        else:
-            raise NotImplementedError(media_type)
+        return create_pending_item(media_type, item_id, client, config, db)
 
     @classmethod
     def from_str(cls, url: str):

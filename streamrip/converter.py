@@ -7,7 +7,7 @@ import shutil
 from tempfile import gettempdir
 from typing import Final, Optional
 
-from .exceptions import ConversionError
+from .exceptions import ConversionError, MissingDependencyError
 
 logger = logging.getLogger("streamrip")
 
@@ -49,7 +49,7 @@ class Converter:
         :type remove_source: bool
         """
         if shutil.which("ffmpeg") is None:
-            raise Exception(
+            raise MissingDependencyError(
                 "Could not find FFMPEG executable. Install it to convert audio files.",
             )
 

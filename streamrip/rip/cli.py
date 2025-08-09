@@ -190,7 +190,7 @@ async def url(ctx, urls):
             async with Main(cfg) as main:
                 await main.add_all(urls)
                 await main.resolve()
-                await main.rip()
+                await main.downloader.rip()
 
             if version_coro is not None:
                 latest_version, notes = await version_coro
@@ -256,7 +256,7 @@ async def file(ctx, path):
                     await main.add_all(items)
 
                 await main.resolve()
-                await main.rip()
+                await main.downloader.rip()
     except aiohttp.ClientConnectorCertificateError as e:
         from ..utils.ssl_utils import print_ssl_error_help
 
@@ -399,15 +399,15 @@ async def search(ctx, first, output_file, num_results, source, media_type, query
     with ctx.obj["config"] as cfg:
         async with Main(cfg) as main:
             if first:
-                await main.search_take_first(source, media_type, query)
+                await main.searcher.search_take_first(source, media_type, query)
             elif output_file:
-                await main.search_output_file(
+                await main.searcher.search_output_file(
                     source, media_type, query, output_file, num_results
                 )
             else:
-                await main.search_interactive(source, media_type, query)
+                await main.searcher.search_interactive(source, media_type, query)
             await main.resolve()
-            await main.rip()
+            await main.downloader.rip()
 
 
 @rip.command()
@@ -430,7 +430,7 @@ async def lastfm(ctx, source, fallback_source, url):
     with config as cfg:
         async with Main(cfg) as main:
             await main.resolve_lastfm(url)
-            await main.rip()
+            await main.downloader.rip()
 
 
 @rip.command()
@@ -445,7 +445,7 @@ async def id(ctx, source, media_type, id):
         async with Main(cfg) as main:
             await main.add_by_id(source, media_type, id)
             await main.resolve()
-            await main.rip()
+            await main.downloader.rip()
 
 
 async def latest_streamrip_version(verify_ssl: bool = True) -> tuple[str, str | None]:

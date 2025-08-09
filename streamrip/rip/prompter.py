@@ -120,7 +120,7 @@ class TidalPrompter(CredentialPrompter):
                 # successful
                 break
             else:
-                raise Exception
+                raise AuthenticationError("Tidal login failed.")
 
         c = self.config.session.tidal
         c.user_id = info["user_id"]  # type: ignore

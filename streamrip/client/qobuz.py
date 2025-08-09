@@ -11,10 +11,12 @@ import aiohttp
 
 from ..config import Config
 from ..exceptions import (
+    APIError,
     AuthenticationError,
     IneligibleError,
     InvalidAppIdError,
     InvalidAppSecretError,
+    InvalidMediaTypeError,
     MissingCredentialsError,
     NonStreamableError,
 )
@@ -81,7 +83,7 @@ class QobuzSpoofer:
 
         match = re.search(self.app_id_regex, self.bundle)
         if match is None:
-            raise Exception("Could not find app id.")
+            raise APIError("Could not find app id.")
 
         app_id = str(match.group("app_id"))
 
@@ -291,7 +293,9 @@ class QobuzClient(Client):
 
     async def search(self, media_type: str, query: str, limit: int = 500) -> list[dict]:
         if media_type not in ("artist", "album", "track", "playlist"):
-            raise Exception(f"{media_type} not available for search on qobuz")
+            raise InvalidMediaTypeError(
+                f"{media_type} not available for search on qobuz"
+            )
 
         params = {
             "query": query,

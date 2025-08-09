@@ -12,6 +12,7 @@ from mutagen.id3 import (
 )
 from mutagen.mp4 import MP4, MP4Cover
 
+from ..exceptions import InvalidFileTypeError, TaggerError
 from .track import TrackMetadata
 
 logger = logging.getLogger("streamrip")
@@ -210,7 +211,7 @@ class Container(Enum):
         if self == Container.FLAC:
             size = os.path.getsize(cover_path)
             if size > FLAC_MAX_BLOCKSIZE:
-                raise Exception("Cover art too big for FLAC")
+                raise TaggerError("Cover art too big for FLAC")
             cover = Picture()
             cover.type = 3
             cover.mime = "image/jpeg"
@@ -247,7 +248,7 @@ async def tag_file(path: str, meta: TrackMetadata, cover_path: str | None):
     elif ext == "mp3":
         container = Container.MP3
     else:
-        raise Exception(f"Invalid extension {ext}")
+        raise InvalidFileTypeError(f"Invalid extension {ext}")
 
     audio = container.get_mutagen_class(path)
     tags = container.get_tag_pairs(meta)

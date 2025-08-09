@@ -99,7 +99,7 @@ class TestErrorHandling:
 
             main.media = [mock_media_success, mock_media_failure]
 
-            await main.rip()
+            await main.downloader.rip()
 
             mock_media_success.rip.assert_called_once()
             mock_media_failure.rip.assert_called_once()

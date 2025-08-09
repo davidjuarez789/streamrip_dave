@@ -49,4 +49,4 @@ def get_quality_id(
 
         return 4
 
-    raise Exception(f"Invalid {bit_depth = }")
+    raise ValueError(f"Invalid {bit_depth = }")
